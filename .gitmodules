@@ -1,0 +1,3 @@
+[submodule "tools/minijail"]
+	path = tools/minijail
+	url = https://github.com/google/minijail
