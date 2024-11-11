@@ -70,6 +70,7 @@ Now if we want to add the seccomp filter to our program:
 sandbox-create \
     --app Element \
     --entry element-desktop \
+    --path /opt/Element \
     --dri \
     --seccomp /home/$USER/.sandbox_manager/seccomp/element.bpf
 ```
