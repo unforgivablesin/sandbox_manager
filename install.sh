@@ -23,4 +23,4 @@ cat > "/usr/bin/sandbox-remove" << EOF
 python3 /etc/SandboxManager/remove.py "\$@"
 EOF
 
-chmod +x /usr/bin/sandbox-create /usr/bin/sandbox-launch /usr/bin/sandbox-remove
+chmod 755 /usr/bin/sandbox-create /usr/bin/sandbox-launch /usr/bin/sandbox-remove
