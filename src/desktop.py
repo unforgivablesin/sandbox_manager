@@ -6,7 +6,8 @@ class DesktopEntry:
     def __init__(self, filename: str, name: str, exec: str, type: str,
                  icon: str, terminal: str, generic_name: str,
                  start_notify: str, wm_class: str, mime_type: str,
-                 categories: str, actions: str, keywords: str) -> None:
+                 categories: str, actions: str, keywords: str,
+                 comment: str) -> None:
 
         self._filename = filename
         self._name = name
@@ -21,6 +22,7 @@ class DesktopEntry:
         self._categories = categories
         self._actions = actions
         self._keywords = keywords
+        self._comment = comment
 
         self._no_display = False
         self._sandboxed = False
