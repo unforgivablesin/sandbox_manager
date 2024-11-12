@@ -2,7 +2,7 @@ import os
 from typing import Optional, Dict, Any
 from argparse import Namespace
 
-from . import DIRECTORY, APP_DIRECTORY, CONFIG_DIRECTORY, SECCOMP_DIRECTORY
+from . import DIRECTORY, APP_DIRECTORY, CONFIG_DIRECTORY, SECCOMP_DIRECTORY, HOME_DIR
 from .desktop import (DesktopEntry, sandboxed_desktop_entry_factory,
                       hidden_desktop_entry_factory, desktop_entry_factory)
 
@@ -72,7 +72,7 @@ def sandbox_delete_app(app: str) -> None:
     os.system(f"rm -rf {CONFIG_DIRECTORY}/{app}")
     os.system(f"rm -rf {SECCOMP_DIRECTORY}/{app}")
 
-    applications = os.environ["HOME"] + "/.local/share/applications/"
+    applications = os.path.join(HOME_DIR, ".local", "share", "applications")
     os.system(f"rm -rf {applications}/{app}-sandboxed.desktop")
 
 
@@ -98,8 +98,10 @@ def sandbox_app_factory(args: Namespace) -> None:
 
 
 def sandbox_launcher(args: Dict[str, Any], argstr: str) -> None:
-    config = Config.from_config(
-        f"/home/user/.sandbox_manager/config/{args.app}")
+    home_dir = os.path.expanduser("~")
+    file_path = os.path.join(home_dir, ".sandbox_manager", "config", args.app)
+
+    config = Config.from_config(file_path)
     launch_sandbox(binary_cmd=config.cmd,
                    args=argstr,
                    app=config.app,

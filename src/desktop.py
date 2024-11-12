@@ -1,3 +1,4 @@
+import os
 from typing import Self
 
 
@@ -65,10 +66,14 @@ class DesktopEntry:
         if self._no_display:
             data += f"NoDisplay=true"
 
+        home_dir = os.path.expanduser("~")
+
         if self._sandboxed:
-            filename = f"/home/user/.local/share/applications/{app}-sandboxed.desktop"
+            filename = os.path.join(home_dir, ".local", "share",
+                                    "applications", f"{app}-sandboxed.desktop")
         else:
-            filename = f"/home/user/.local/share/applications/{app}.desktop"
+            filename = os.path.join(home_dir, ".local", "share",
+                                    "applications", f"{app}.desktop")
 
         with open(filename, "w") as fp:
             fp.write(data)

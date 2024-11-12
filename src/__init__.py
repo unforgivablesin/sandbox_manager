@@ -1,10 +1,11 @@
 import os
 
-DIRECTORY = os.environ["HOME"] + "/.sandbox_manager"
+HOME_DIR = os.path.expanduser("~")
+DIRECTORY = os.path.join(HOME_DIR, ".sandbox_manager")
 
-APP_DIRECTORY = DIRECTORY + "/appdata"
-CONFIG_DIRECTORY = DIRECTORY + "/config"
-SECCOMP_DIRECTORY = DIRECTORY + "/seccomp"
+APP_DIRECTORY = os.path.join(DIRECTORY, "appdata")
+CONFIG_DIRECTORY = os.path.join(DIRECTORY, "config")
+SECCOMP_DIRECTORY = os.path.join(DIRECTORY, "seccomp")
 
 try:
     os.mkdir(DIRECTORY)

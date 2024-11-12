@@ -54,8 +54,10 @@ def launch_sandbox(
     wayland_display = os.environ.get('WAYLAND_DISPLAY')
     xauthority = os.environ.get('XAUTHORITY')
     xdg_runtime_dir = os.environ['XDG_RUNTIME_DIR']
+    xdg_data_dirs = os.environ['XDG_DATA_DIRS']
     display = os.environ.get('DISPLAY')
     home = os.environ['HOME']
+    user = os.environ['USER']
 
     seccomp_fd = None
     xdg_proxy_pid = None
@@ -175,10 +177,9 @@ def launch_sandbox(
         command.append(f"--seccomp {seccomp_fd}")
 
     # Test
-    aaa = os.environ['XDG_DATA_DIRS']
-    command.append(f"--setenv XDG_DATA_DIRS {aaa}")
+    command.append(f"--setenv XDG_DATA_DIRS {xdg_data_dirs}")
     command.append(
-        "--bind /home/user/.config/mimeapps.list /home/user/.config/mimeapps.list"
+        f"--bind /home/{user}/.config/mimeapps.list /home/{user}/.config/mimeapps.list"
     )
 
     command.append(binary_cmd)
@@ -192,9 +193,12 @@ def launch_sandbox(
     print(command[0], args)
     print("------------------")
 
-    subprocess.check_output(f"{command[0]} {args}",
-                            shell=True,
-                            pass_fds=[seccomp_fd])
+    if seccomp_fd:
+        subprocess.check_output(f"{command[0]} {args}",
+                                shell=True,
+                                pass_fds=[seccomp_fd])
+    else:
+        subprocess.check_output(f"{command[0]} {args}", shell=True)
 
     # Kill xdg dbus proxy
     if xdg_proxy_pid:
