@@ -178,3 +178,7 @@ class DBusPermissionBuilder:
     def screenshot(self) -> Self:
         self._permissions |= DBusPermissionList.Screenshot
         return self
+
+    def notifications(self) -> Self:
+        self._permissions |= DBusPermissionList.Notifications
+        return self
