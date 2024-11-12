@@ -30,7 +30,7 @@ class PermissionsBase:
 
     @classmethod
     def from_dict(cls, data) -> Self:
-        return cls(0)
+        ...
 
     @property
     def permissions(self) -> Dict[str, bool]:

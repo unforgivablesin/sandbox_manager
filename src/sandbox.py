@@ -42,7 +42,7 @@ class Sandbox:
         self.script = DIRECTORY + f"/{self.app}.sh"
         self.app_data_dir = APP_DIRECTORY + "/" + app
 
-    def create_app(self) -> None | Exception:
+    def create_app(self) -> None:
 
         # Create application home directory
         try:

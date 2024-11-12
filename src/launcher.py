@@ -134,13 +134,14 @@ def launch_sandbox(
     if permissions.has_permission(PermissionList.DownloadsFolder):
         command.append(f"--bind-try {home}/Downloads {home}/Downloads")
 
-    # Rest of the permissions
+    # DRI
     if permissions.has_permission(PermissionList.Dri):
-        command.append("--dev-bind /dev/dri /dev/dri")
+        command.append("--dev-bind-try /dev/dri /dev/dri")
         command.append(
-            "--ro-bind /sys/devices/pci0000:00 /sys/devices/pci0000:00")
-        command.append("--ro-bind /sys/dev/char /sys/dev/char")
+            "--ro-bind-try /sys/devices/pci0000:00 /sys/devices/pci0000:00")
+        command.append("--ro-bind-try /sys/dev/char /sys/dev/char")
 
+    # Audio
     if permissions.has_permission(PermissionList.Pulseaudio):
         command.append(
             f"--ro-bind-try {xdg_runtime_dir}/pulse {xdg_runtime_dir}/pulse")
