@@ -80,8 +80,25 @@ class DesktopEntry:
 
     @classmethod
     def from_desktop_entry(cls, filename: str) -> Self:
-
-        data = open(filename, "r").read()
+        # Handle portable applications
+        if filename.startswith('/home'):
+            if os.path.exists(filename):
+                data = open(filename, "r").read()
+            else:
+                raise FileNotFoundError(f"No desktop file found: {filename}")
+        else:
+            # Try system locations
+            system_paths = [
+                f"/usr/share/applications/{os.path.basename(filename)}",
+                filename
+            ]
+            
+            for path in system_paths:
+                if os.path.exists(path):
+                    data = open(path, "r").read()
+                    break
+            else:
+                raise FileNotFoundError(f"No desktop file found in system paths: {filename}")
 
         def get_key_value(key):
             result = data.split(key + "=")
@@ -90,14 +107,14 @@ class DesktopEntry:
                 return result[1].split("\n")[0]
 
         name = get_key_value("Name")
-        exec = get_key_value("Exec")
+        exec = get_key_value("Exec") 
         type = get_key_value("Type")
         icon = get_key_value("Icon")
         terminal = get_key_value("Terminal")
         comment = get_key_value("Comment")
         generic_name = get_key_value("GenericName")
         start_notify = get_key_value("StartupNotify")
-        wm_class = get_key_value("StartupWMClass")
+        wm_class = get_key_value("StartupWMClass") 
         mime_type = get_key_value("MimeType")
         categories = get_key_value("Categories")
         actions = get_key_value("Actions")
@@ -128,8 +145,14 @@ def desktop_entry_factory(name: str) -> DesktopEntry:
 
 def sandboxed_desktop_entry_factory(app: str, name: str,
                                     script: str) -> DesktopEntry:
-    entry = DesktopEntry.from_desktop_entry(
-        filename=f"/usr/share/applications/{name}.desktop")
+    # Handle both system and portable applications
+    try:
+        # First try system location
+        entry = DesktopEntry.from_desktop_entry(
+            filename=f"/usr/share/applications/{name}.desktop")
+    except FileNotFoundError:
+        # Then try portable location if system fails
+        entry = DesktopEntry.from_desktop_entry(name)
 
     entry.add_category("Sandboxed")
     entry.set_exec(script)
@@ -148,3 +171,4 @@ def hidden_desktop_entry_factory(name: str) -> DesktopEntry:
     entry.create_entry(app=name)
 
     return entry
+

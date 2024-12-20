@@ -26,7 +26,7 @@ class Sandbox:
             dbus_permissions: Optional[DBusPermissionBuilder] = None) -> None:
 
         self.app = app
-        self.path = path
+        self.path = path  # Directly use provided path
         self.entry = entry
         self.filename = f"/usr/bin/{entry}"
         self.seccomp_filter = seccomp_filter
@@ -50,6 +50,9 @@ class Sandbox:
         except Exception:
             raise ValueError("Sandboxed application already exists")
 
+        # Ensure we bind the correct directory for portable apps
+        command.append(f"--ro-bind {self.path} {self.path}")
+
         sandboxed_desktop_entry_factory(
             app=self.app,
             name=self.entry,
@@ -58,6 +61,7 @@ class Sandbox:
         entry = hidden_desktop_entry_factory(name=self.entry)
         entry = desktop_entry_factory(name=self.entry)
 
+        # Create configuration file for TorBrowser
         ConfigBuilder(app=self.app,
                       entry=entry,
                       path=self.path,
@@ -101,6 +105,10 @@ def sandbox_launcher(args: Dict[str, Any], argstr: str) -> None:
     home_dir = os.path.expanduser("~")
     file_path = os.path.join(home_dir, ".sandbox_manager", "config", args.app)
 
+    # Check if config file exists before trying to load it
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"No config file found at {file_path}")
+
     config = Config.from_config(file_path)
     launch_sandbox(binary_cmd=config.cmd,
                    args=argstr,
@@ -110,3 +118,4 @@ def sandbox_launcher(args: Dict[str, Any], argstr: str) -> None:
                    seccomp_filter=config.seccomp_filter,
                    dbus_app=config.dbus_app,
                    dbus_permissions=config.dbus_permissions)
+

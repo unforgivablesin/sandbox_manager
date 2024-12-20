@@ -4,11 +4,16 @@ from typing import Optional
 from . import APP_DIRECTORY
 from .permissions import Permissions, DBusPermissionList, PermissionList
 
+def _handle_portable_app(path: str) -> str:
+    """Handle portable applications like Tor Browser"""
+    if path.startswith('/home'):
+        parent_dir = os.path.dirname(path)
+        if os.path.exists(os.path.join(parent_dir, 'start-tor-browser')):
+            return parent_dir
+    return path
 
 def launch_xdg_dbus_proxy(app: str, permissions: Permissions) -> int:
-
     command = ["/usr/bin/xdg-dbus-proxy"]
-
     dbus_session_bus_address = os.environ['DBUS_SESSION_BUS_ADDRESS']
     xdg_runtime_dir = os.environ['XDG_RUNTIME_DIR']
 
@@ -30,7 +35,7 @@ def launch_xdg_dbus_proxy(app: str, permissions: Permissions) -> int:
     print(args)
     print("------------------")
 
-    os.system(f"mkdir -p {xdg_runtime_dir}/xdg-dbus-proxy")
+    os.makedirs(f"{xdg_runtime_dir}/xdg-dbus-proxy", exist_ok=True)
 
     pid = os.fork()
 
@@ -38,7 +43,6 @@ def launch_xdg_dbus_proxy(app: str, permissions: Permissions) -> int:
         os.execl(command[0], *args.split(" "))
 
     return pid
-
 
 def launch_sandbox(
         binary_cmd: str,
@@ -50,6 +54,9 @@ def launch_sandbox(
         dbus_app: Optional[str] = None,
         dbus_permissions: Optional[DBusPermissionList] = None) -> None:
     command = ["/bin/bwrap"]
+
+    # Handle portable apps
+    path = _handle_portable_app(path)
 
     wayland_display = os.environ.get('WAYLAND_DISPLAY')
     xauthority = os.environ.get('XAUTHORITY')
@@ -71,29 +78,29 @@ def launch_sandbox(
     command.append("--unshare-cgroup")
     command.append("--unshare-user")
     command.append("--new-session")
-    #command.append("--unshare-net")
+
+    command.append("--bind /run/dbus /run/dbus")
+    command.append("--bind /var/run/dbus /var/run/dbus")
+    command.append("--bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket")
+    command.append("--bind-try /run/user/1000/bus /run/user/1000/bus")
+
+    # Shell environment
+    command.append("--ro-bind /bin/bash /bin/bash")
+    command.append("--ro-bind /etc/shells /etc/shells")
 
     # /etc
     command.append(
         "--ro-bind-try /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-bundle.crt"
     )
-    command.append(
-        "--ro-bind-try /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt"
-    )
     command.append("--ro-bind-try /etc/resolv.conf /etc/resolv.conf")
     command.append("--ro-bind-try /etc/hosts /etc/hosts")
-    command.append("--ro-bind-try /etc/ld.so.preload /etc/ld.so.preload")
-    command.append("--ro-bind-try /etc/ld.so.conf /etc/ld.so.conf")
-    command.append("--ro-bind-try /etc/ld.so.conf /etc/ld.so.conf")
     command.append("--ro-bind-try /etc/ld.so.cache /etc/ld.so.cache")
-    command.append("--ro-bind-try /etc/ld.so.conf.d /etc/ld.so.conf.d")
     command.append("--ro-bind-try /etc/fonts /etc/fonts")
 
     # Necessary to run
     command.append("--ro-bind /usr /usr")
     command.append("--ro-bind /lib64 /lib64")
     command.append("--ro-bind /lib /lib")
-    command.append("--ro-bind /usr /usr")
     command.append("--ro-bind /proc /proc")
     command.append("--ro-bind /dev /dev")
     command.append("--tmpfs /var")
@@ -105,14 +112,9 @@ def launch_sandbox(
     # Mount directory of application
     command.append(f"--ro-bind {path} {path}")
 
-    # Give access to /etc/resolv.conf and hosts
-    command.append("--ro-bind-try /etc/resolv.conf /etc/resolv.conf")
-    #command.append("--ro-bind-try /etc/hosts /etc/hosts")
-
     # Use X11 when available
     if display:
         command.append(f"--setenv DISPLAY {display}")
-
         if xauthority:
             command.append(f"--ro-bind {xauthority} {xauthority}")
 
@@ -120,12 +122,11 @@ def launch_sandbox(
     if wayland_display:
         command.append(f"--setenv WAYLAND_DISPLAY {wayland_display}")
         command.append("--setenv XDG_SESSION_TYPE wayland")
+        command.append(
+            f"--ro-bind {xdg_runtime_dir}/{wayland_display} {xdg_runtime_dir}/{wayland_display}"
+        )
 
-    command.append(
-        f"--ro-bind {xdg_runtime_dir}/{wayland_display} {xdg_runtime_dir}/{wayland_display}"
-    )
-
-    # Seperate home folder
+    # Separate home folder
     if permissions.has_permission(PermissionList.HomeFolder):
         command.append(f"--bind-try {home} {home}")
     else:
@@ -134,12 +135,22 @@ def launch_sandbox(
     if permissions.has_permission(PermissionList.DownloadsFolder):
         command.append(f"--bind-try {home}/Downloads {home}/Downloads")
 
-    # DRI
+    # DRI - Asahi Linux specific paths
     if permissions.has_permission(PermissionList.Dri):
-        command.append("--dev-bind-try /dev/dri /dev/dri")
-        command.append(
-            "--ro-bind-try /sys/devices/pci0000:00 /sys/devices/pci0000:00")
+        command.append("--dev-bind /dev/dri /dev/dri")
         command.append("--ro-bind-try /sys/dev/char /sys/dev/char")
+        command.append("--ro-bind-try /sys/class/drm /sys/class/drm")
+        command.append("--ro-bind-try /sys/devices/platform/soc/206400000.gpu /sys/devices/platform/soc/206400000.gpu")
+        command.append("--ro-bind-try /sys/devices/platform/soc/soc:display-subsystem /sys/devices/platform/soc/soc:display-subsystem")
+        command.append("--ro-bind /usr/lib64/dri /usr/lib64/dri")
+        command.append("--ro-bind-try /proc/cpuinfo /proc/cpuinfo")
+        command.append("--ro-bind-try /sys/devices/system/cpu /sys/devices/system/cpu")
+        command.append("--ro-bind-try /sys/class/drm/card1/device/drm /sys/class/drm/card1/device/drm")
+        command.append("--ro-bind-try /sys/class/drm/card2/device/drm /sys/class/drm/card2/device/drm")
+        command.append("--ro-bind-try /sys/class/drm/card2-eDP-1/device /sys/class/drm/card2-eDP-1/device")
+        command.append("--setenv LIBGL_VSYNC 0")
+        command.append("--setenv __GL_SYNC_TO_VBLANK 0")
+        command.append("--setenv GALLIUM_DRIVER asahi")
 
     # Audio
     if permissions.has_permission(PermissionList.Pulseaudio):
@@ -169,15 +180,12 @@ def launch_sandbox(
 
     # Seccomp
     if seccomp_filter:
-        # We want to open the file and unset CLOEXEC so it doesnt close on exec
         fd = open(seccomp_filter, "r")
         seccomp_fd = os.dup(fd.fileno())
         fcntl.fcntl(seccomp_fd, fcntl.F_SETFD,
                     fcntl.fcntl(seccomp_fd, fcntl.F_GETFD) & ~fcntl.FD_CLOEXEC)
-
         command.append(f"--seccomp {seccomp_fd}")
 
-    # Test
     command.append(f"--setenv XDG_DATA_DIRS {xdg_data_dirs}")
     command.append(
         f"--bind /home/{user}/.config/mimeapps.list /home/{user}/.config/mimeapps.list"
@@ -185,10 +193,6 @@ def launch_sandbox(
 
     command.append(binary_cmd)
     command.append(args)
-
-    # When Wayland is available we will always choose it over X11
-    #if wayland_display:
-    #    command.append("--ozone-platform=wayland")
 
     args = " ".join(arg for arg in command[1:])
     print(command[0], args)
@@ -204,3 +208,4 @@ def launch_sandbox(
     # Kill xdg dbus proxy
     if xdg_proxy_pid:
         os.kill(xdg_proxy_pid, 9)
+
