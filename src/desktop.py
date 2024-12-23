@@ -46,6 +46,7 @@ class DesktopEntry:
         self._no_display = True
 
     def add_category(self, category) -> None:
+        self._categories = self._categories or ""
         self._categories += category + ";"
 
     def create_entry(self, app: str) -> None:
@@ -80,41 +81,27 @@ class DesktopEntry:
 
     @classmethod
     def from_desktop_entry(cls, filename: str) -> Self:
-        # Handle portable applications
-        if filename.startswith('/home'):
-            if os.path.exists(filename):
-                data = open(filename, "r").read()
-            else:
-                raise FileNotFoundError(f"No desktop file found: {filename}")
+        if os.path.exists(filename):
+            data = open(filename, "r").read()
         else:
-            # Try system locations
-            system_paths = [
-                f"/usr/share/applications/{os.path.basename(filename)}",
-                filename
-            ]
-            
-            for path in system_paths:
-                if os.path.exists(path):
-                    data = open(path, "r").read()
-                    break
-            else:
-                raise FileNotFoundError(f"No desktop file found in system paths: {filename}")
+            raise FileNotFoundError(f"No desktop file found: {filename}")
 
         def get_key_value(key):
             result = data.split(key + "=")
 
             if len(result) > 1:
                 return result[1].split("\n")[0]
+            return ""  # Return empty string if key not found
 
         name = get_key_value("Name")
-        exec = get_key_value("Exec") 
+        exec = get_key_value("Exec")
         type = get_key_value("Type")
         icon = get_key_value("Icon")
         terminal = get_key_value("Terminal")
         comment = get_key_value("Comment")
         generic_name = get_key_value("GenericName")
         start_notify = get_key_value("StartupNotify")
-        wm_class = get_key_value("StartupWMClass") 
+        wm_class = get_key_value("StartupWMClass")
         mime_type = get_key_value("MimeType")
         categories = get_key_value("Categories")
         actions = get_key_value("Actions")
@@ -136,23 +123,23 @@ class DesktopEntry:
                    keywords=keywords)
 
 
-def desktop_entry_factory(name: str) -> DesktopEntry:
-    entry = DesktopEntry.from_desktop_entry(
-        filename=f"/usr/share/applications/{name}.desktop")
-
+def desktop_entry_factory(name: str, portable: bool = False, path: str = None) -> DesktopEntry:
+    if portable:
+        if path is None:
+            raise ValueError("Path to portable desktop entry is required")
+        entry = DesktopEntry.from_desktop_entry(filename=path)
+    else:
+        entry = DesktopEntry.from_desktop_entry(filename=f"/usr/share/applications/{name}.desktop")
     return entry
 
 
-def sandboxed_desktop_entry_factory(app: str, name: str,
-                                    script: str) -> DesktopEntry:
-    # Handle both system and portable applications
-    try:
-        # First try system location
-        entry = DesktopEntry.from_desktop_entry(
-            filename=f"/usr/share/applications/{name}.desktop")
-    except FileNotFoundError:
-        # Then try portable location if system fails
-        entry = DesktopEntry.from_desktop_entry(name)
+def sandboxed_desktop_entry_factory(app: str, name: str, script: str, portable: bool = False, path: str = None) -> DesktopEntry:
+    if portable:
+        if path is None:
+            raise ValueError("Path to portable desktop entry is required")
+        entry = DesktopEntry.from_desktop_entry(filename=path)
+    else:
+        entry = DesktopEntry.from_desktop_entry(filename=f"/usr/share/applications/{name}.desktop")
 
     entry.add_category("Sandboxed")
     entry.set_exec(script)
@@ -164,11 +151,9 @@ def sandboxed_desktop_entry_factory(app: str, name: str,
 
 
 def hidden_desktop_entry_factory(name: str) -> DesktopEntry:
-    entry = DesktopEntry.from_desktop_entry(
-        filename=f"/usr/share/applications/{name}.desktop")
+    entry = DesktopEntry.from_desktop_entry(filename=f"/usr/share/applications/{name}.desktop")
 
     entry.set_no_display()
     entry.create_entry(app=name)
 
     return entry
-
