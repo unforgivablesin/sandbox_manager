@@ -51,6 +51,10 @@ parser.add_argument(
     action='store_true',
     help="Allow the application to interact with virtual filesystems")
 
+parser.add_argument('--portable',
+                    action='store_true',
+                    help="Specify if the application is portable")
+
 args = parser.parse_args()
 
 if args.seccomp and not os.path.exists(args.seccomp):

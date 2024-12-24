@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sandbox-create --app Signal \
-    --path /opt/Signal \
+    --path /usr/lib64/Signal \
     --entry signal-desktop \
     --dri \
     --downloads \
@@ -11,4 +11,5 @@ sandbox-create --app Signal \
     --dbus-app org.signal.Signal \
     --screencast \
     --screenshot \
-    --seccomp /home/$USER/.sandbox_manager/seccomp/signal.bpf
+    --seccomp /home/$USER/.sandbox_manager/seccomp/signal-desktop.bpf    
+
