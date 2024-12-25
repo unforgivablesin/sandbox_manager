@@ -51,6 +51,7 @@ class Permissions(PermissionsBase):
     @classmethod
     def from_dict(cls, data: Dict[str, bool]) -> Self:
         permissions = cls(0)
+
         if data['dri']: permissions.set_permission(PermissionList.Dri)
         if data['ipc']: permissions.set_permission(PermissionList.Ipc)
         if data['dbus']: permissions.set_permission(PermissionList.Dbus)
@@ -61,6 +62,7 @@ class Permissions(PermissionsBase):
             permissions.set_permission(PermissionList.Pulseaudio)
         if data['pipewire']:
             permissions.set_permission(PermissionList.Pipewire)
+
         return permissions
 
     @property
@@ -84,12 +86,14 @@ class DBusPermissions(PermissionsBase):
     @classmethod
     def from_dict(cls, data: Dict[str, bool]) -> Self:
         permissions = cls(0)
+
         if data['notifications']:
             permissions.set_permission(DBusPermissionList.Notifications)
         if data['screencast']:
             permissions.set_permission(DBusPermissionList.Screencast)
         if data['screenshot']:
             permissions.set_permission(DBusPermissionList.Screenshot)
+
         return permissions
 
     @property

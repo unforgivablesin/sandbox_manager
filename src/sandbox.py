@@ -10,7 +10,7 @@ from .permissions import (Permissions, PermissionBuilder,
                           DBusPermissionBuilder)
 
 from .config import ConfigBuilder, Config
-from .launcher import launch_sandbox
+from .launcher import SandboxLauncher
 
 
 class Sandbox:
@@ -68,12 +68,20 @@ class Sandbox:
 
 
 def sandbox_delete_app(app: str) -> None:
+    home_dir = os.path.expanduser("~")
+    config_file_path = os.path.join(home_dir, ".sandbox_manager", "config",
+                                    app)
+
+    config = Config.from_config(config_file_path)
+
     os.system(f"rm -rf {APP_DIRECTORY}/{app}")
     os.system(f"rm -rf {CONFIG_DIRECTORY}/{app}")
     os.system(f"rm -rf {SECCOMP_DIRECTORY}/{app}")
 
     applications = os.path.join(HOME_DIR, ".local", "share", "applications")
+
     os.system(f"rm -rf {applications}/{app}-sandboxed.desktop")
+    os.system(f"rm -rf {applications}/{config.entry}")
 
 
 def sandbox_app_factory(args: Namespace) -> None:
@@ -87,26 +95,27 @@ def sandbox_app_factory(args: Namespace) -> None:
     permissions = permissions.build()
     dbus_permissions = dbus_permissions.build()
 
-    sandbox = Sandbox(app=args.app,
-                      path=args.path,
-                      entry=args.entry,
-                      permissions=permissions,
-                      seccomp_filter=args.seccomp,
-                      dbus_app=args.dbus_app,
-                      dbus_permissions=dbus_permissions)
-    sandbox.create_app()
+    Sandbox(app=args.app,
+            path=args.path,
+            entry=args.entry,
+            permissions=permissions,
+            seccomp_filter=args.seccomp,
+            dbus_app=args.dbus_app,
+            dbus_permissions=dbus_permissions).create_app()
 
 
 def sandbox_launcher(args: Dict[str, Any], argstr: str) -> None:
     home_dir = os.path.expanduser("~")
-    file_path = os.path.join(home_dir, ".sandbox_manager", "config", args.app)
+    config_file_path = os.path.join(home_dir, ".sandbox_manager", "config",
+                                    args.app)
 
-    config = Config.from_config(file_path)
-    launch_sandbox(binary_cmd=config.cmd,
-                   args=argstr,
-                   app=config.app,
-                   path=config.path,
-                   permissions=config.permissions,
-                   seccomp_filter=config.seccomp_filter,
-                   dbus_app=config.dbus_app,
-                   dbus_permissions=config.dbus_permissions)
+    config = Config.from_config(config_file_path)
+
+    SandboxLauncher(binary_cmd=config.cmd,
+                    args=argstr,
+                    app=config.app,
+                    path=config.path,
+                    permissions=config.permissions,
+                    seccomp_filter=config.seccomp_filter,
+                    dbus_app=config.dbus_app,
+                    dbus_permissions=config.dbus_permissions).launch()

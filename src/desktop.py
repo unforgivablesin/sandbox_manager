@@ -11,6 +11,7 @@ class DesktopEntry:
                  comment: str) -> None:
 
         self._filename = filename
+        self._entry = os.path.basename(filename)
         self._name = name
         self._type = type
         self._exec = exec
