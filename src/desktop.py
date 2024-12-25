@@ -40,13 +40,13 @@ class DesktopEntry:
         self._name = f"Sandboxed-{self.name}"
         self._sandboxed = True
 
-    def set_exec(self, command) -> None:
+    def set_exec(self, command: str) -> None:
         self._exec = command
 
     def set_no_display(self) -> None:
         self._no_display = True
 
-    def add_category(self, category) -> None:
+    def add_category(self, category: str) -> None:
         self._categories += category + ";"
 
     def create_entry(self, app: str) -> None:

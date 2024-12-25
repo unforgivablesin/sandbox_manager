@@ -14,7 +14,7 @@ class XdgDbusProxy:
         self._command = ["/usr/bin/xdg-dbus-proxy"]
         self._xdg_runtime_dir = os.environ['XDG_RUNTIME_DIR']
 
-    def _set_permissions(self):
+    def _set_permissions(self) -> None:
 
         self._command.append(f"--own={self._app}")
         self._command.append(f"--own={self._app}.*")
@@ -26,7 +26,7 @@ class XdgDbusProxy:
         if self._permissions.has_permission(DBusPermissionList.Screenshot):
             self._command.append("--talk=org.freedesktop.portal.Screenshot")
 
-    def _set_dbus_proxy_socket(self):
+    def _set_dbus_proxy_socket(self) -> None:
         dbus_session_bus_address = os.environ['DBUS_SESSION_BUS_ADDRESS']
 
         self._command.append(
@@ -86,36 +86,36 @@ class SandboxLauncher:
         self.seccomp_fd = None
         self.xdg_proxy_pid = None
 
-    def _bind(self, source, dest=None) -> None:
+    def _bind(self, source: str, dest: Optional[str] = None) -> None:
         dest = dest if dest else source
         self.command.append(f"--bind-try {source} {dest}")
 
-    def _ro_bind(self, source, dest=None) -> None:
+    def _ro_bind(self, source: str, dest: Optional[str] = None) -> None:
         dest = dest if dest else source
         self.command.append(f"--ro-bind-try {source} {dest}")
 
-    def _dev_bind(self, source, dest=None) -> None:
+    def _dev_bind(self, source: str, dest: Optional[str] = None) -> None:
         dest = dest if dest else source
         self.command.append(f"--dev-bind-try {source} {dest}")
 
-    def _set_env(self, env, value) -> None:
+    def _set_env(self, env: str, value: str) -> None:
         self.command.append(f"--setenv {env} {value}")
 
-    def _tmpfs_bind(self, path) -> None:
+    def _tmpfs_bind(self, path: str) -> None:
         self.command.append(f"--tmpfs {path}")
 
-    def _set_ipc_permission(self):
+    def _set_ipc_permission(self) -> None:
         if not self.permissions.has_permission(PermissionList.Ipc):
             self.command.append("--unshare-ipc")
 
-    def _set_security_isolation(self):
+    def _set_security_isolation(self) -> None:
         self.command.append("--unshare-pid")
         self.command.append("--unshare-uts")
         self.command.append("--unshare-cgroup")
         self.command.append("--unshare-user")
         self.command.append("--new-session")
 
-    def _bind_etc_paths(self):
+    def _bind_etc_paths(self) -> None:
         etc_bind_paths = [
             "/etc/ssl/certs/ca-bundle.crt",
             "/etc/ssl/certs/ca-certificates.crt", "/etc/resolv.conf",
@@ -126,7 +126,7 @@ class SandboxLauncher:
         for path in etc_bind_paths:
             self._ro_bind(path)
 
-    def _bind_filesystem_paths(self):
+    def _bind_filesystem_paths(self) -> None:
         fs_bind_paths = ["/usr", "/lib64", "/lib", "/usr", "/proc", "/dev"]
 
         for path in fs_bind_paths:
@@ -140,7 +140,7 @@ class SandboxLauncher:
 
         self.command.append(f"--tmpfs /run --dir {self.xdg_runtime_dir}")
 
-    def _set_display(self):
+    def _set_display(self) -> None:
         if self.display:
             self._set_env("DISPLAY", self.display)
 
@@ -153,30 +153,30 @@ class SandboxLauncher:
 
             self._ro_bind(f"{self.xdg_runtime_dir}/{self.wayland_display}")
 
-    def _set_dri(self):
+    def _set_dri(self) -> None:
         if self.permissions.has_permission(PermissionList.Dri):
             self._dev_bind("/dev/dri")
             self._ro_bind("/sys/devices/pci0000:00")
             self._ro_bind("/sys/dev/char")
 
-    def _set_audio(self):
+    def _set_audio(self) -> None:
         if self.permissions.has_permission(PermissionList.Pulseaudio):
             self._ro_bind(f"{self.xdg_runtime_dir}/pulse")
 
         if self.permissions.has_permission(PermissionList.Pipewire):
             self._ro_bind(f"{self.xdg_runtime_dir}/pipewire-0")
 
-    def _set_shared_downloads(self):
+    def _set_shared_downloads(self) -> None:
         if self.permissions.has_permission(PermissionList.DownloadsFolder):
             self._bind(f"{self.home}/Downloads")
 
-    def _set_shared_home(self):
+    def _set_shared_home(self) -> None:
         if self.permissions.has_permission(PermissionList.HomeFolder):
             self._bind(self.home)
         else:
             self._bind(source=f"{APP_DIRECTORY}/{self.app}", dest=self.home)
 
-    def _launch_xdg_dbus_proxy(self) -> int:
+    def _launch_xdg_dbus_proxy(self) -> Optional[int]:
         if self.permissions.has_permission(PermissionList.Dbus):
             xdg_socket_path = f"{self.xdg_runtime_dir}/xdg-dbus-proxy/{self.dbus_app}.sock"
             self._ro_bind(source=xdg_socket_path, dest="/run/user/1000/bus")
@@ -189,12 +189,12 @@ class SandboxLauncher:
             return XdgDbusProxy(app=self.dbus_app,
                                 permissions=self.dbus_permissions).launch()
 
-    def _set_misc(self):
+    def _set_misc(self) -> None:
         self._set_env("GTK_THEME", "Adwaita:dark")
         self._set_env("XDG_DATA_DIRS", self.xdg_data_dirs)
         self._bind(f"/home/{self.user}/.config/mimeapps.list")
 
-    def launch(self):
+    def launch(self) -> None:
         self._set_security_isolation()
         self._set_ipc_permission()
 
